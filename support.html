@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Replay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #CC001A;
+      --red-dim: rgba(204,0,26,0.12);
+      --bg: #0D0D0D;
+      --surface: #141414;
+      --surface-2: #1A1A1A;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
+      --text-primary: #F5F5F5;
+      --text-secondary: #888;
+      --text-tertiary: #555;
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.7;
+    }
+    nav {
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,13,13,0.95);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .nav-inner {
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      text-decoration: none;
+    }
+    .nav-logo img {
+      height: 18px;
+      width: auto;
+      filter: invert(1);
+    }
+    .nav-back {
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-back:hover { color: var(--text-primary); }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 60px 24px 100px;
+    }
+    h1 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+    }
+    .lead {
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+      max-width: 540px;
+    }
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 56px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .contact-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--red-dim);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(204,0,26,0.2);
+    }
+    .contact-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--red);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .contact-text h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .contact-text p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .contact-text a {
+      color: var(--red);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .contact-text a:hover { text-decoration: underline; }
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+    .faq {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .faq-item {
+      background: var(--surface);
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+    .faq-a {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin: 0;
+    }
+    .faq-a a {
+      color: var(--red);
+      text-decoration: none;
+    }
+    .faq-a a:hover { text-decoration: underline; }
+    code {
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--text-primary);
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+    footer a {
+      color: var(--text-tertiary);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="../android/app/src/main/res/drawable/replay.png" alt="Replay">
+      </a>
+      <a href="index.html" class="nav-back">← Back to home</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Get Help</h1>
+    <p class="lead">Have a question or running into an issue? We're happy to help — reach out and we'll get back to you.</p>
+
+    <div class="contact-card">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+      <div class="contact-text">
+        <h3>Email Support</h3>
+        <p>Send us a message at <a href="mailto:support@replay-app.com">support@replay-app.com</a> and we'll get back to you as soon as possible.</p>
+      </div>
+    </div>
+
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q">How do I add an RSS feed?</div>
+        <p class="faq-a">Open Replay on Android and tap the <strong>Feeds</strong> tab at the bottom. Tap the <strong>+</strong> button in the top right corner. Paste the RSS or Atom feed URL (e.g. <code>https://example.com/feed.xml</code>) and tap <strong>Add Feed</strong>. The feed will be fetched and added to your list immediately.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How does Chrome sync work?</div>
+        <p class="faq-a">The Replay Chrome extension lets you save any web page to your Replay reading queue with one click. Install the extension from the Chrome Web Store, sign in with the same Google account you use in the Android app, and tap the Replay icon in your Chrome toolbar while on any page you want to save. It will appear in your <strong>Saved</strong> tab in the Android app within seconds.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How do I sign in?</div>
+        <p class="faq-a">Replay uses Google Sign-In for authentication. Open the app and tap <strong>Sign in with Google</strong>. Select your Google account, grant the necessary permissions, and you'll be signed in. Use the same Google account on both the Android app and Chrome extension to keep everything in sync.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">My saved articles aren't syncing — what should I do?</div>
+        <p class="faq-a">First, check that you're signed in to the same Google account in both the Chrome extension and the Android app. Then check your internet connection. If the issue persists, try signing out and back in on both platforms. If it's still not working, <a href="mailto:support@replay-app.com">contact us</a> with details of your device and Android version.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use Replay without signing in?</div>
+        <p class="faq-a">You can browse RSS feeds without signing in. However, signing in is required to save articles to your reading queue and to use the Chrome extension sync feature.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 Replay. All rights reserved. &nbsp;·&nbsp;
+    <a href="privacy.html">Privacy</a> &nbsp;·&nbsp;
+    <a href="terms.html">Terms</a> &nbsp;·&nbsp;
+    <a href="support.html">Support</a>
+  </footer>
+
+</body>
+</html>

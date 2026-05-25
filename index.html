@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Replay — RSS Reading, Reimagined</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --red: #CC001A;
+      --red-dim: rgba(204, 0, 26, 0.15);
+      --red-glow: rgba(204, 0, 26, 0.35);
+      --bg: #0D0D0D;
+      --surface: #141414;
+      --surface-2: #1A1A1A;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --text-primary: #F5F5F5;
+      --text-secondary: #888;
+      --text-tertiary: #555;
+      --radius: 16px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ─────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── Scroll animation base ─────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* ── Layout ────────────────────────────────────────── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+
+    section {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── NAV ───────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 0;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid transparent;
+      transition: background 0.3s, border-color 0.3s, backdrop-filter 0.3s;
+    }
+    nav.scrolled {
+      background: rgba(13, 13, 13, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-color: var(--border);
+    }
+
+    .nav-inner {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-logo-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+    .nav-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--text-primary);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #e0001e;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px var(--red-glow);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+    }
+    .btn-ghost:hover {
+      background: var(--surface-2);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ── HERO ──────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px 0 80px;
+      overflow: hidden;
+    }
+
+    .hero-bg-glow {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(204,0,26,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--red);
+      background: var(--red-dim);
+      border: 1px solid rgba(204,0,26,0.25);
+      padding: 5px 12px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--red);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hero-headline {
+      font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+    .hero-headline .accent {
+      color: var(--red);
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      max-width: 580px;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+
+    .hero-ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .hero-cta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .hero-cta-badge:hover {
+      background: var(--surface-2);
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+    .hero-cta-badge svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .badge-label {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+    .badge-label span:first-child {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-label span:last-child {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* ── HERO VISUAL ───────────────────────────────────── */
+    .hero-visual {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    /* ── SCREEN CAROUSEL ───────────────────────────────── */
+    .screen-carousel {
+      position: relative;
+      width: 300px;
+    }
+    .screen-slide {
+      width: 100%;
+      height: auto;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      border-radius: 8px;
+    }
+    .screen-slide.active {
+      opacity: 1;
+      position: relative;
+    }
+
+    /* ── NAV LOGO IMAGES ───────────────────────────────── */
+    .nav-app-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .nav-wordmark {
+      height: 18px;
+      width: auto;
+    }
+
+    /* ── HERO LOGO PAIRING ─────────────────────────────── */
+    .hero-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .hero-logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .hero-logo-wordmark {
+      height: 22px;
+      width: auto;
+    }
+
+    /* ── STORE BADGES — both identical ────────────────── */
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: #000000;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      text-decoration: none;
+      color: white;
+      height: 58px;
+      min-width: 190px;
+      box-sizing: border-box;
+      transition: transform 0.2s, opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .store-badge:hover {
+      transform: translateY(-2px);
+      opacity: 0.85;
+    }
+    .store-badge svg { flex-shrink: 0; }
+    .store-badge > div {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+    .store-badge .badge-sub {
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.55);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .store-badge .badge-main {
+      font-size: 15px;
+      font-weight: 700;
+      color: white;
+    }
+
+    /* ── SECTION HEADERS ───────────────────────────────── */
+    .section-eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 3.5vw, 44px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      max-width: 520px;
+    }
+
+    /* ── FEATURES ──────────────────────────────────────── */
+    .features {
+      padding: 120px 0;
+    }
+
+    .features-header {
+      text-align: left;
+      margin-bottom: 72px;
+    }
+    .features-header .section-sub {
+      margin: 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .feature-card {
+      background: var(--surface);
+      padding: 36px 36px;
+      transition: background 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(204,0,26,0.05) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover { background: var(--surface-2); }
+    .feature-card:hover::after { opacity: 1; }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--red-dim);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      border: 1px solid rgba(204,0,26,0.2);
+    }
+    .feature-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--red);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .feature-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+    .feature-desc {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    /* ── HOW IT WORKS ──────────────────────────────────── */
+    .how-it-works {
+      padding: 120px 0;
+      background: linear-gradient(to bottom, transparent, rgba(204,0,26,0.03) 50%, transparent);
+    }
+
+    .how-inner {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 20px;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--red);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+    .step-content p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    /* Extension visual */
+    .ext-visual {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .ext-toolbar {
+      background: var(--surface-2);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ext-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .ext-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+    }
+    .ext-url-bar {
+      flex: 1;
+      height: 28px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ext-url-text {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+    .ext-url-text strong {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .ext-content {
+      padding: 24px;
+    }
+    .ext-article-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .ext-article-kicker {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .ext-article-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .ext-save-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--red);
+      color: white;
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    .ext-save-btn svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+    .ext-confirmation {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #4ade80;
+      font-weight: 500;
+    }
+    .ext-confirmation-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+    }
+
+    /* ── DIVIDER ───────────────────────────────────────── */
+    .divider-line {
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border-strong) 30%, var(--border-strong) 70%, transparent);
+    }
+
+    /* ── CTA SECTION ───────────────────────────────────── */
+    .cta-section {
+      padding: 120px 0;
+      text-align: center;
+    }
+
+    .cta-inner {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .cta-section .section-title {
+      font-size: clamp(32px, 4vw, 52px);
+      margin-bottom: 20px;
+    }
+
+    .cta-section .section-sub {
+      margin: 0 auto 48px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* ── FOOTER ────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .footer-logo-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--red);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .footer-logo-icon svg {
+      width: 13px;
+      height: 13px;
+      fill: white;
+    }
+    .footer-logo-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-secondary); }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    /* ── RESPONSIVE ────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 60px;
+        text-align: center;
+      }
+      .hero-copy {
+        align-items: center;
+        text-align: center;
+      }
+      .hero-eyebrow { justify-content: center; }
+      .hero-sub { max-width: none; }
+      .hero-ctas { justify-content: center; }
+      .hero-visual {
+        order: -1;
+        justify-content: center;
+      }
+
+      .screen-carousel { width: 260px; }
+
+      .how-inner {
+        grid-template-columns: 1fr;
+        gap: 52px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links { display: none; }
+
+      .container { padding: 0 24px; }
+      .nav-inner { padding: 0 24px; }
+
+      .footer-inner {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .hero-cta-badge { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAV ──────────────────────────────────────────── -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <img src="../android/app/src/main/res/drawable/replay.png" class="nav-wordmark" alt="Replay" style="filter: invert(1);">
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
+      </ul>
+      <a href="#" class="btn btn-primary">Get the App</a>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg-glow"></div>
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <img src="../android/app/src/main/res/drawable/app_icon.png" class="reveal" alt="Replay" style="width: 180px; height: 180px; border-radius: 36px; object-fit: cover; margin-bottom: 28px; display: block;">
+          <h1 class="hero-headline reveal reveal-delay-1">
+            Stay on top of<br/>the web you<br/><span class="accent">actually care about.</span>
+          </h1>
+          <p class="hero-sub reveal reveal-delay-2">
+            Replay is a clean, fast RSS reader that keeps your feeds, saved articles, and browsing in perfect sync — across Android and Chrome.
+          </p>
+          <div class="hero-ctas reveal reveal-delay-3">
+            <a href="#" class="store-badge">
+              <svg width="22" height="24" viewBox="0 0 22 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0.5 0.8L12.8 12L0.5 23.2V0.8Z" fill="#00D2FF"/>
+                <path d="M0.5 0.8L16.5 9.5L12.8 12L0.5 0.8Z" fill="#00F076"/>
+                <path d="M0.5 23.2L12.8 12L16.5 14.5L0.5 23.2Z" fill="#FF3A44"/>
+                <path d="M16.5 9.5L21 12L16.5 14.5L12.8 12L16.5 9.5Z" fill="#FFC107"/>
+              </svg>
+              <div>
+                <span class="badge-sub">Get it on</span>
+                <span class="badge-main">Google Play</span>
+              </div>
+            </a>
+            <a href="#" class="store-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" fill="#4285F4"/>
+                <circle cx="12" cy="12" r="4.5" fill="white"/>
+                <path d="M12 2C8.13 2 4.86 4.22 3.25 7.5H12c2.49 0 4.5 2.01 4.5 4.5 0 .53-.09 1.03-.26 1.5L20.46 8C19.08 4.42 15.83 2 12 2z" fill="#EA4335"/>
+                <path d="M3.25 7.5C2.46 9.03 2 10.76 2 12.6c0 3.84 2.16 7.18 5.35 8.9l4.15-7.19c-.98-.52-1.65-1.56-1.65-2.76 0-.53.14-1.03.38-1.47L3.25 7.5z" fill="#34A853"/>
+                <path d="M12 21.5c3.21 0 6.01-1.59 7.73-4.03L15.97 10c-.49.94-1.47 1.55-2.6 1.55-.06 0-.12 0-.18-.01L12 22.6c0-.37-.01-.74-.01-1.1z" fill="#FBBC05"/>
+              </svg>
+              <div>
+                <span class="badge-sub">Available in the</span>
+                <span class="badge-main">Chrome Web Store</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- SCREEN CAROUSEL -->
+        <div class="hero-visual reveal reveal-delay-2">
+          <div class="screen-carousel">
+            <img class="screen-slide active" src="screens/home.png" alt="Replay home screen">
+            <img class="screen-slide" src="screens/article.png" alt="Replay article">
+            <img class="screen-slide" src="screens/saved.png" alt="Replay saved articles">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider-line"></div>
+
+  <!-- ── FEATURES ──────────────────────────────────────── -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header">
+        <p class="section-eyebrow reveal">Features</p>
+        <h2 class="section-title reveal reveal-delay-1">Everything you need.<br/>Nothing you don't.</h2>
+        <p class="section-sub reveal reveal-delay-2">Replay strips away the noise and gives you a reading experience that's fast, focused, and yours.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M4 11a1 1 0 011-1h14a1 1 0 011 1v1a1 1 0 01-1 1H5a1 1 0 01-1-1v-1z"/><path d="M4 6a1 1 0 011-1h14a1 1 0 010 2H5a1 1 0 01-1-1z"/><path d="M4 16a1 1 0 011-1h8a1 1 0 010 2H5a1 1 0 01-1-1z"/></svg>
+          </div>
+          <h3 class="feature-title">RSS feeds, beautifully organised</h3>
+          <p class="feature-desc">Subscribe to any RSS or Atom feed and browse with zero clutter.</p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <h3 class="feature-title">Chrome extension sync</h3>
+          <p class="feature-desc">Hit save on any webpage in Chrome and it appears instantly in your Replay reading queue on Android.</p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/></svg>
+          </div>
+          <h3 class="feature-title">Save for later</h3>
+          <p class="feature-desc">Bookmark articles to your reading list from feeds or the Chrome extension. Read when you're ready.</p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-3">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </div>
+          <h3 class="feature-title">Dark &amp; light mode</h3>
+          <p class="feature-desc">A reading experience that adapts to the light. Switch instantly between dark and light themes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider-line"></div>
+
+  <!-- ── HOW IT WORKS ──────────────────────────────────── -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="how-inner">
+        <div class="how-copy">
+          <p class="section-eyebrow reveal">The Workflow</p>
+          <h2 class="section-title reveal reveal-delay-1">From browser<br/>to reading queue<br/>in one click.</h2>
+          <p class="section-sub reveal reveal-delay-2">The Replay Chrome extension bridges your desktop browsing and your Android reading list — so nothing interesting slips through the cracks.</p>
+
+          <div class="steps">
+            <div class="step reveal reveal-delay-1">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Install the Chrome extension</h3>
+                <p>Add the Replay extension to Chrome and sign in with your account. It lives quietly in your toolbar until you need it.</p>
+              </div>
+            </div>
+            <div class="step reveal reveal-delay-2">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>Save any page with one click</h3>
+                <p>On any article or webpage you want to read later, click the Replay icon. It's saved instantly — title, URL, and all.</p>
+              </div>
+            </div>
+            <div class="step reveal reveal-delay-3">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Read on Android, anywhere</h3>
+                <p>Open Replay on your phone and your saved articles are already there, synced and ready for your commute or couch.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extension preview -->
+        <div class="ext-visual reveal reveal-delay-2">
+          <div class="ext-toolbar">
+            <div class="ext-dots">
+              <div class="ext-dot"></div>
+              <div class="ext-dot"></div>
+              <div class="ext-dot"></div>
+            </div>
+            <div class="ext-url-bar">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="1" y="3" width="10" height="8" rx="1.5" stroke="#555" stroke-width="1.2"/>
+                <path d="M4 3V2a2 2 0 014 0v1" stroke="#555" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              <span class="ext-url-text"><strong>arstechnica.com</strong>/article/browser-wars</span>
+            </div>
+          </div>
+          <div class="ext-content">
+            <div class="ext-article-preview">
+              <div class="ext-article-kicker">Ars Technica</div>
+              <div class="ext-article-title">The browser wars aren't over — they're just getting started again</div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <button class="ext-save-btn">
+                <svg viewBox="0 0 12 12"><path d="M6 1v8M3 6l3 3 3-3"/></svg>
+                Save to Replay
+              </button>
+              <div class="ext-confirmation">
+                <div class="ext-confirmation-dot"></div>
+                Saved!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider-line"></div>
+
+  <!-- ── CTA ──────────────────────────────────────────── -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-inner">
+        <p class="section-eyebrow reveal" style="text-align:center;">Get started</p>
+        <h2 class="section-title reveal reveal-delay-1">Take back your<br/>reading list.</h2>
+        <p class="section-sub reveal reveal-delay-2">Download Replay for Android and add the Chrome extension.</p>
+        <div class="cta-buttons reveal reveal-delay-3">
+          <a href="#" class="store-badge">
+            <svg width="22" height="24" viewBox="0 0 22 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.5 0.8L12.8 12L0.5 23.2V0.8Z" fill="#00D2FF"/>
+              <path d="M0.5 0.8L16.5 9.5L12.8 12L0.5 0.8Z" fill="#00F076"/>
+              <path d="M0.5 23.2L12.8 12L16.5 14.5L0.5 23.2Z" fill="#FF3A44"/>
+              <path d="M16.5 9.5L21 12L16.5 14.5L12.8 12L16.5 9.5Z" fill="#FFC107"/>
+            </svg>
+            <div>
+              <span class="badge-sub">Get it on</span>
+              <span class="badge-main">Google Play</span>
+            </div>
+          </a>
+          <a href="#" class="store-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" fill="#4285F4"/>
+              <circle cx="12" cy="12" r="4.5" fill="white"/>
+              <path d="M12 2C8.13 2 4.86 4.22 3.25 7.5H12c2.49 0 4.5 2.01 4.5 4.5 0 .53-.09 1.03-.26 1.5L20.46 8C19.08 4.42 15.83 2 12 2z" fill="#EA4335"/>
+              <path d="M3.25 7.5C2.46 9.03 2 10.76 2 12.6c0 3.84 2.16 7.18 5.35 8.9l4.15-7.19c-.98-.52-1.65-1.56-1.65-2.76 0-.53.14-1.03.38-1.47L3.25 7.5z" fill="#34A853"/>
+              <path d="M12 21.5c3.21 0 6.01-1.59 7.73-4.03L15.97 10c-.49.94-1.47 1.55-2.6 1.55-.06 0-.12 0-.18-.01L12 22.6c0-.37-.01-.74-.01-1.1z" fill="#FBBC05"/>
+            </svg>
+            <div>
+              <span class="badge-sub">Available in the</span>
+              <span class="badge-main">Chrome Web Store</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ────────────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <a href="#" class="footer-logo">
+          <img src="../android/app/src/main/res/drawable/replay.png" alt="Replay" style="height: 24px; width: auto; filter: invert(1);">
+        </a>
+        <ul class="footer-links">
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="terms.html">Terms</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+        <span class="footer-copy">&copy; 2026 Replay. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    // Scroll reveal
+    const revealEls = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    revealEls.forEach(el => observer.observe(el));
+
+    // Trigger hero elements on load (they're already in view)
+    window.addEventListener('load', () => {
+      revealEls.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight) {
+          el.classList.add('visible');
+        }
+      });
+    });
+
+    // Screenshot carousel — auto-cycle every 3 seconds
+    (function() {
+      const slides = document.querySelectorAll('.screen-slide');
+      if (!slides.length) return;
+      let current = 0;
+      setInterval(() => {
+        slides[current].classList.remove('active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('active');
+      }, 3000);
+    })();
+  </script>
+</body>
+</html>
